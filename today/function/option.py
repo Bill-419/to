@@ -174,7 +174,7 @@ class TableOperations:
                 if not item:
                     item = QTableWidgetItem()
                     self.table.setItem(row, col, item)
-                item.setText('')
+                item.setText(text)
                 item.setBackground(background_color)
                 item.setFont(font)
                 item.setTextAlignment(Qt.AlignLeft|Qt.AlignVCenter)

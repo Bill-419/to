@@ -1,11 +1,7 @@
 from PySide6.QtWidgets import QMainWindow,QInputDialog, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QApplication,QColorDialog
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt
-from function.menu_base import MenuOperations
-from PySide6.QtWidgets import QApplication, QTableWidget, QTableWidgetItem, QPushButton, QVBoxLayout, QWidget, QCheckBox, \
-    QDialog, QDialogButtonBox, QScrollArea, QHBoxLayout, QLabel
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtCore import Qt
+from function.search.menu_limit import MenuOperations
 
 class TableWidget(QWidget):
     def __init__(self, table=None, editable=False):
@@ -27,7 +23,7 @@ class TableWidget(QWidget):
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.table)
-
+        
         if self.editable:
             self.menu_operations = MenuOperations(self.table, self.editable)
             self.table.cellDoubleClicked.connect(self.menu_operations.on_cell_double_clicked)
@@ -40,4 +36,3 @@ class TableWidget(QWidget):
     @staticmethod
     def create_table_widget(editable=False):
         return TableWidget(editable=editable)
-

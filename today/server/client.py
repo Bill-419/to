@@ -1,4 +1,5 @@
 import requests
+import json
 from concurrent.futures import ThreadPoolExecutor
 
 class DataClient:

@@ -3,7 +3,6 @@ import json
 from flask import Flask, request, jsonify
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any
-import time
 
 app = Flask(__name__)
 executor = ThreadPoolExecutor(max_workers=10)
@@ -11,6 +10,36 @@ executor = ThreadPoolExecutor(max_workers=10)
 redis_client = redis.Redis(host='localhost', port=6379, db=0)  
 
 class RedisHandler:
+
+    def load_all_rn_records(self):
+        keys = redis_client.keys('rn_record:*')
+        rn_records = []
+        for key in keys:
+            data = redis_client.get(key)
+            rn_record = json.loads(data)
+            rn_records.append(rn_record)
+        return rn_records
+
+    def save_rn_record(self, rn_record_id, rn_record_data):
+        rn_record_data['issue_number'] = rn_record_data.get('issue_number', str(rn_record_id))  # 确保 issue_number 存在
+        redis_client.set(f'rn_record:{rn_record_id}', json.dumps(rn_record_data))
+
+    def delete_rn_record(self, rn_record_id):
+        redis_client.delete(f'rn_record:{rn_record_id}')
+
+    def get_new_rn_record_id(self):
+        keys = redis_client.keys('rn_record:*')
+        if keys:
+            max_id = max(int(key.split(b':')[-1]) for key in keys)
+            return max_id + 1
+        else:
+            return 1
+
+    def get_rn_record_by_id(self, rn_record_id):
+        data =redis_client.get(f'rn_record:{rn_record_id}')
+        if data:
+            return json.loads(data)
+        return None
 
     def save_table(self, table_name: str, data: List[Dict[str, Any]]):
         redis_client.set(f'{table_name}_data', json.dumps(data)) 
@@ -35,7 +64,6 @@ class RedisHandler:
             'message': '数据已更新'
         }
         redis_client.publish('table_updates', json.dumps(message_data))
-
 
     def get_all(self, table_name: str):
         return {
@@ -109,6 +137,39 @@ def get_permissions_route():
         return jsonify({"status": "success", "permissions": permissions})
     else:
         return jsonify({"status": "error", "message": "No permissions found for user"})
+
+@app.route('/rn_records', methods=['GET'])
+def get_all_rn_records():
+    future = executor.submit(redis_handler.load_all_rn_records)
+    rn_records = future.result()
+    return jsonify(rn_records)
+
+@app.route('/rn_record/<int:rn_record_id>', methods=['GET'])
+def get_rn_record_by_id(rn_record_id):
+    future = executor.submit(redis_handler.get_rn_record_by_id, rn_record_id)
+    rn_record = future.result()
+    if rn_record:
+        return jsonify(rn_record)
+    return jsonify({"error": "Record not found"}), 404
+
+@app.route('/rn_record', methods=['POST'])
+def save_rn_record():
+    data = request.json
+    if not data.get('id'):
+        rn_record_id = redis_handler.get_new_rn_record_id()
+        data['id'] = rn_record_id
+    else:
+        rn_record_id = data['id']
+    future = executor.submit(redis_handler.save_rn_record, rn_record_id, data)
+    future.result()
+    return jsonify({"status": "success", "rn_record_id": rn_record_id})
+
+@app.route('/rn_record/<int:rn_record_id>', methods=['DELETE'])
+def delete_rn_record(rn_record_id):
+    future = executor.submit(redis_handler.delete_rn_record, rn_record_id)
+    future.result()
+    return jsonify({"status": "success"})
+
 
 if __name__ == '__main__':
 

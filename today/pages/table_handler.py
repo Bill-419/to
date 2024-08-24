@@ -6,7 +6,7 @@ from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 import sys
 from server.client import DataClient
-from function.table import TableWidget
+from pages.table_search import TableWidget
 import json
 
 class TableHandler:
@@ -182,9 +182,9 @@ class TableHandler:
 
     def populate_table_with_default_data(self):
         table = self.table_widget.get_table()
-        table.setRowCount(2)
+        table.setRowCount(6)
         table.setColumnCount(8)
-        for row in range(2):
+        for row in range(6):
             for col in range(8):
                 item = QTableWidgetItem(f'({row}, {col})')
                 item.setForeground(QColor(Qt.black))
