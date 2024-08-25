@@ -1,0 +1,193 @@
+@startuml improved_class_diagram
+
+left to right direction
+
+' 定义 QTableWidget 类（用于显示继承关系）
+class QTableWidget {
+}
+
+' 定义 QWidget 类（用于显示继承关系）
+class QWidget {
+}
+
+' 定义接口 Observer
+interface Observer {
+    +update()
+}
+
+' 定义工厂类 WidgetFactory
+class WidgetFactory {
+    +create_table_widget(table_client : TableClient = None, editable : bool = False, can_save_data : bool = False) : TableWidget
+    +create_search_dialog(table_widget : QTableWidget) : SearchDialog
+}
+
+' 定义 TableWidget 类（继承自 QWidget）
+class TableWidget {
+    -table : QTableWidget
+    -table_client : TableClient
+    -editable : bool
+    -can_save_data : bool
+    -menu_operations : MenuOperations
+    -search_dialog : SearchDialog
+    -filter_dialog : FilterDialog
+    -checked_rows_per_column : dict
+    -checkboxes : dict
+    -observers : List[Observer]
+    -update_listener : UpdateListener
+    +__init__(table_client : TableClient = None, table : QTableWidget = None, editable : bool = False, can_save_data : bool = False)
+    +add_observer(observer : Observer)
+    +remove_observer(observer : Observer)
+    +notify_observers()
+    +save_data()
+    +_collect_table_data() : (List[Dict[str, Any]], List[Dict[str, Any]])
+    +_parse_cell(item : QTableWidgetItem) : Dict[str, Any]
+    +_empty_cell_data() : Dict[str, Any]
+    +_collect_merged_cells_info(row : int) : List[Dict[str, Any]]
+    +load_table_data()
+    +populate_table(table_data : List[Dict[str, Any]], merged_cells : List[Dict[str, Any]])
+    +add_filter_buttons_to_table(table_data : List[Dict[str, Any]])
+    +show_checkboxes(col_idx : int)
+    +apply_filter(col_idx : int, selected_items : List[str])
+    +update_table_visibility()
+    +refresh_data()
+    +export_to_excel()
+    +populate_table_with_default_data()
+    +open_search_dialog()
+    +get_table() : QTableWidget
+    +display_update_notification(message : str)
+    +closeEvent(event : QCloseEvent)
+}
+
+' 定义 UpdateListener 类（继承自 QThread）
+class UpdateListener {
+    -client_id : str
+    -table_name : str
+    -channel_name : str
+    -username : str
+    -pool : ConnectionPool
+    -is_running : bool
+    --
+    +__init__(server_url: str, client_id: str, channel_name: str, username: str, table_name: str = None, parent: QObject = None)
+    +run()
+    +stop()
+}
+
+' 定义 FilterDialog 类
+class FilterDialog {
+    -search_bar : QLineEdit
+    -scroll_area : QScrollArea
+    -checkbox_layout : QVBoxLayout
+    -checkboxes : List[QCheckBox]
+    +__init__(parent : QWidget = None)
+    +set_data(items : Set[str])
+    +filter_checkboxes(text : str)
+    +get_selected_items() : List[str]
+}
+
+' 定义 MenuOperations 类
+class MenuOperations {
+    -table : QTableWidget
+    -table_operations : TableOperations
+    -editable : bool
+    +__init__(table : QTableWidget, editable : bool)
+    +add_common_actions(menu : QMenu)
+    +add_additional_actions(menu : QMenu)
+    +open_menu(position)
+    +on_cell_double_clicked(row : int, column : int)
+}
+
+' 定义 TableOperations 类（用于显示策略模式的上下文类）
+class TableOperations {
+    -table : QTableWidget
+    -current_strategy : TableOperationStrategy
+    +set_strategy(strategy : TableOperationStrategy)
+    +execute_strategy()
+}
+
+' 定义 TableClient 类（用于与服务器通信）
+class TableClient {
+    -server_url : str
+    -table_name : str
+    -client_id : str
+    -executor : ThreadPoolExecutor
+    +__init__(server_url : str, table_name : str, client_id : str)
+    +_async_request(method : str, endpoint : str, payload : dict = None, params : dict = None) : dict
+    +get_user_permissions(username : str) : int
+    +save_all(data : list, merged_cells : list) : dict
+    +get_all() : dict
+}
+
+' 定义 SearchDialog 类
+class SearchDialog {
+    -tab_widget : QTabWidget
+    -search_tab : SearchTab
+    -multi_column_search_tab : MultiColumnSearchTab
+    +__init__(table_widget : QTableWidget, parent : QWidget = None)
+    +show_search_dialog()
+    +update()
+}
+
+' 定义 SearchTab 类
+class SearchTab {
+    -search_input : QLineEdit
+    -replace_input : QLineEdit
+    -next_button : QPushButton
+    -replace_button : QPushButton
+    -match_count_label : QLabel
+    -table_widget : QTableWidget
+    -current_index : int
+    +__init__(parent : QWidget = None)
+    +set_table_widget(table_widget : QTableWidget)
+    +find_next()
+    +replace_text()
+    +update_match_count()
+}
+
+' 定义 MultiColumnSearchTab 类
+class MultiColumnSearchTab {
+    -search_input : QLineEdit
+    -search_button : QPushButton
+    -next_button : QPushButton
+    -match_count_label : QLabel
+    -table_widget : QTableWidget
+    -current_row : int
+    -conditions : List[Tuple[str, str]]
+    -matched_rows : List[int]
+    +__init__(parent : QWidget = None)
+    +set_table_widget(table_widget : QTableWidget)
+    +multi_column_search()
+    +find_all_matches()
+    +cell_matches(row : int, col : int, condition : str) : bool
+    +find_next()
+    +get_column_index_by_title(title : str) : int
+    +parse_conditions(text : str) : List[Tuple[str, str]]
+    +update_match_count()
+}
+
+' 定义接口 TableOperationStrategy
+interface TableOperationStrategy {
+    +execute(QTableWidget table)
+}
+
+' 显示类之间的关系
+TableWidget --|> QWidget : extends
+TableWidget --> QTableWidget : uses
+TableWidget "1" *-- "1" MenuOperations
+TableWidget "1" *-- "1" SearchDialog
+TableWidget "1" *-- "1" TableClient
+TableWidget "1" *-- "1" FilterDialog
+TableWidget "1" o-- "1..*" Observer
+TableWidget "1" --|> WidgetFactory : factory
+TableWidget "1" *-- "1" UpdateListener
+UpdateListener --|> QThread : extends
+SearchDialog "1" --|> Observer : implements
+SearchDialog "1" *-- "1" QTabWidget
+SearchDialog "1" *-- "1" SearchTab
+SearchDialog "1" *-- "1" MultiColumnSearchTab
+MenuOperations --> QTableWidget : uses
+MenuOperations "1" *-- "1" TableOperations
+TableOperations "1" *-- "1" TableOperationStrategy
+SearchTab --> QTableWidget : uses
+MultiColumnSearchTab --> QTableWidget : uses
+
+@enduml
