@@ -1,0 +1,109 @@
+@startuml rr
+
+!define RECTANGLE class
+!define INTERFACE interface
+
+skinparam packageStyle rectangle
+
+package "Model" as M {
+    RECTANGLE RNClientModel {
+        - server_url: str
+        - client_id: str
+        - username: str
+        --
+        + get_all_rn_records(): list
+        + save_rn_record(record_data: dict): dict
+        + delete_rn_record(issue_number: str): dict
+        + check_issue_number_exists(issue_number: str): bool
+        + check_permissions(): bool
+    }
+
+    RECTANGLE UpdateListener {
+        - client_id: str
+        - table_name: str
+        - channel_name: str
+        - username: str
+        - pool: ConnectionPool
+        - is_running: bool
+        --
+        + __init__(server_url: str, client_id: str, channel_name: str, username: str, table_name: str = None, parent: QObject = None)
+        + run(): void
+        + stop(): void
+    }
+}
+
+package "View" as V {
+    RECTANGLE RNMainWidget {
+        - controller: RNController
+        - search_input: QLineEdit
+        - search_button: QPushButton
+        - table: RNTableWidget
+        - update_box: QTextEdit
+        --
+        + show_update_box_context_menu(position)
+        + show_notification(message: str, detail: str)
+        + add_search_input_tooltip(tooltip_text: str)
+        + setup_ui()
+        + closeEvent(event: QCloseEvent)
+    }
+
+    RECTANGLE RNTableWidget {
+        - client: RNClientModel
+        - main_widget: RNMainWidget
+        --
+        + load_table_data(filters: list = None): void
+        + show_context_menu(position): QAction
+    }
+
+    RECTANGLE HtmlTabWidget {
+        - parent: QWidget
+        --
+        + add_tab(title: str, html_content: str): int
+        + setTabsClosable(closeable: bool): void
+    }
+}
+
+package "Controller" as C {
+    RECTANGLE RNController {
+        - model: RNClientModel
+        - view: RNMainWidget
+        - html_manager: HtmlManager
+        - update_listener: UpdateListener
+        --
+        + get_html_tab_widget(): HtmlTabWidget
+        + create_table_widget(parent: QWidget): RNTableWidget
+        + search_records()
+        + add_item()
+        + edit_item()
+        + delete_item()
+        + open_html_viewer(index: QModelIndex)
+        + update_table_based_on_broadcast(data: dict, operation: str)
+    }
+
+    RECTANGLE HtmlManager {
+        - open_html_files: dict
+        - html_tab_widget: HtmlTabWidget
+        --
+        + get_html_tab_widget(): HtmlTabWidget
+        + is_html_open(issue_number: str): bool
+        + reload_html(issue_number: str, new_html_content: str): void
+        + open_html(issue_number: str, html_content: str): void
+        + close_tab(index: int): void
+        + close_html(issue_number: str): void
+        + handle_modified_issue_number(old_issue_number: str, new_issue_number: str, new_html_content: str): void
+        + get_opened_html_list(): list
+        + generate_html(record: dict): str
+    }
+}
+
+M.RNClientModel -down-> C.RNController : Uses
+M.UpdateListener -down-> C.RNController : Listens for updates
+
+C.RNController -down-> V.RNMainWidget : Controls
+C.RNController -down-> C.HtmlManager : Manages
+
+V.RNMainWidget -left-> C.HtmlManager : Uses
+V.RNMainWidget -left-> V.RNTableWidget : Contains
+C.HtmlManager -left-> V.HtmlTabWidget : Manages
+
+@enduml
